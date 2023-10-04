@@ -1,0 +1,67 @@
+# ---------------------	Initialization
+
+units real
+dimension 3
+atom_style full
+boundary p p p
+
+# --------------------- System definition
+
+pair_style lj/cut/coul/long 12.0 6.0
+bond_style harmonic
+angle_style harmonic
+read_data CH4_01.data extra/atom/types 2 extra/bond/types 1 extra/angle/types 1
+read_data CO2_09.data add append offset 2 1 1 0 0
+kspace_style pppm 1.0e-2
+pair_modify mix geometric shift yes
+
+
+# ---------------------	Simulation settings
+
+neighbor 4.0 bin
+neigh_modify delay 5 check yes
+
+# ---------------------	Equilibration #1
+
+velocity all create 700.0 69420 dist gaussian mom yes rot yes
+timestep 1.0
+thermo 1000
+fix eq1 all nve/limit 0.1
+run 30000
+unfix eq1
+reset_timestep 0
+
+# ---------------------	Simulation #1 (T = 700 K, P = 5000 atm)
+
+# Initial PT conditions are 3450 atm and 1800 K (from NVE run)
+fix sim1 all npt temp 1800 700 100 iso 3450 5000 1000
+dump dat1 all atom 500 hcg_1.lammpstrj
+run 50000
+undump dat1
+unfix sim1
+write_data hcg_1mix.data
+reset_timestep 0
+
+# ---------------------	Equilibration #2
+
+fix eq2 all nve
+run 10000
+unfix eq2
+reset_timestep 0
+
+# ---------------------	Simulation #2 (T = 700 K, P = 1000 atm)
+
+# Initial PT conditions are 4750 atm and 700 K (from NVE run)
+fix sim2 all npt temp 700 700 100 iso 4750 1000 1000
+dump dat2 all atom 500 hcg_2.lammpstrj
+run 50000
+undump dat2
+unfix sim2
+write_data hcg_2mix.data
+reset_timestep 0
+
+# ---------------------	Equilibration #3
+
+fix eq3 all nve
+run 10000
+unfix eq3
